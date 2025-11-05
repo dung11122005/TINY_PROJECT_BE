@@ -1,0 +1,43 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_db_new
+    restart: always
+    environment:
+      MYSQL_DATABASE: student_db
+      MYSQL_USER: student_user
+      MYSQL_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: 654321
+    ports:
+      - "3307:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app_network
+
+  web:
+    build:
+      context: .
+    container_name: django_app_new
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DB_NAME: student_db
+      DB_USER: student_user
+      DB_PASS: 123456
+      DB_HOST: db
+    networks:
+      - app_network
+
+networks:
+  app_network:
+
+
+volumes:
+  mysql_data:

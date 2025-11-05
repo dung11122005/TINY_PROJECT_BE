@@ -1,0 +1,42 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+
+# === Django specific ===
+*.log
+*.pot
+*.pyc
+*.pyo
+*.mo
+*.db
+db.sqlite3
+media/
+staticfiles/
+.env
+.env.local
+venv/
+venv*/ 
+.venv/
+.venv*/
+
+# === IDEs ===
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# === OS files ===
+.DS_Store
+Thumbs.db
+
+# === Migrations (optional, nếu bạn muốn bỏ qua) ===
+# ** KHÔNG KHUYÊN DÙNG TRONG DỰ ÁN TEAMWORK **
+# chỉ dùng khi đang test cá nhân
+# */migrations/
+# !*/migrations/__init__.py
+
+# === Node (nếu bạn dùng React/Vue trong Django) ===
+node_modules/
+dist/
+build/
