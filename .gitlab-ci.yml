@@ -1,0 +1,120 @@
+# ==========================================
+# GitLab CI/CD Configuration (Professional)
+# ==========================================
+
+stages:
+  - feature_test
+  - unit_test
+  - build_health_check
+  - deploy
+
+# ------------------------------------------
+# 1. Feature Test Stage
+# ------------------------------------------
+feature_test:
+  stage: feature_test
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git python3 py3-pip nodejs npm
+  script:
+    # Check merge conflicts
+    - echo "=== Checking merge conflicts ==="
+    - git fetch origin main
+    - git diff --check origin/main
+
+    # Detect project type and run formatter checks
+    - echo "=== Detecting project type ==="
+    - |
+      if [ -f "package.json" ]; then
+        echo "[NodeJS] Running ESLint..."
+        npm install
+        npx eslint . || (echo "ESLint check failed" && exit 1)
+      elif [ -f "requirements.txt" ]; then
+        echo "[Python] Running flake8 and black checks..."
+        pip install flake8 black
+        flake8 . || (echo "flake8 failed" && exit 1)
+        black --check . || (echo "black format check failed" && exit 1)
+      elif [ -f "pom.xml" ]; then
+        echo "[Java] Project detected - skipping formatting checks."
+      else
+        echo "No recognized project type found."
+      fi
+  only:
+    - merge_requests
+  allow_failure: false
+
+# ------------------------------------------
+# 2. Unit Test Stage
+# ------------------------------------------
+unit_test:
+  stage: unit_test
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache python3 py3-pip nodejs npm openjdk17 maven
+  script:
+    - |
+      if [ -f "package.json" ]; then
+        echo "[NodeJS] Running Jest unit tests..."
+        npm ci
+        npx jest --ci || exit 1
+      elif [ -f "requirements.txt" ]; then
+        echo "[Python] Running pytest unit tests..."
+        pip install -r requirements.txt pytest
+        pytest || exit 1
+      elif [ -f "pom.xml" ]; then
+        echo "[Java] Running JUnit tests..."
+        mvn test
+      else
+        echo "No recognized test framework found."
+  only:
+    - main
+  allow_failure: false
+
+# ------------------------------------------
+# 3. Build & Health Check Stage
+# ------------------------------------------
+build_and_health_check:
+  stage: build_health_check
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache python3 py3-pip nodejs npm curl openjdk17 maven
+  script:
+    - |
+      if [ -f "package.json" ]; then
+        echo "[NodeJS] Building project..."
+        npm install
+        npm run build || exit 1
+        echo "[NodeJS] Running health check..."
+        npm start &
+        sleep 5
+        curl -f http://localhost:5000/health || exit 1
+      elif [ -f "requirements.txt" ]; then
+        echo "[Python] Installing dependencies..."
+        pip install -r requirements.txt
+        echo "[Python] Running health check..."
+        python app.py &
+        sleep 5
+        curl -f http://localhost:5000/health || exit 1
+      elif [ -f "pom.xml" ]; then
+        echo "[Java] Packaging application..."
+        mvn package -DskipTests
+        echo "[Java] Running health check..."
+        java -jar target/*.jar &
+        sleep 10
+        curl -f http://localhost:8080/health || exit 1
+      else
+        echo "Unknown project type, skipping build."
+  only:
+    - main
+
+# ------------------------------------------
+# 4. Deploy Stage (optional)
+# ------------------------------------------
+deploy:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Starting deployment..."
+    - echo "Deployed successfully."
+  only:
+    - main
